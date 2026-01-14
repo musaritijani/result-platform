@@ -11,10 +11,14 @@ import os
 app = Flask(__name__)
 
 # Configuration - HARDCODED FOR DEVELOPMENT
-app.config['SECRET_KEY'] = 'dev-secret-key-12345-hardcoded'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///results.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-12345-hardcoded')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///results.db')
+
+# Fix for Render PostgreSQL URL format
+if app.config['SQLALCHEMY_DATABASE_URI'] and app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'dev-jwt-secret-12345-hardcoded'
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-12345-hardcoded')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 # Initialize extensions
