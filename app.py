@@ -346,26 +346,60 @@ def index():
 
 # ==================== DATABASE INITIALIZATION ====================
 
-def init_db():
-    """Initialize the database and create default admin"""
+# Initialize database and create default users
+def initialize_database():
+    """Initialize database with tables and default users"""
     with app.app_context():
-        db.create_all()
+        try:
+            # Create all tables
+            db.create_all()
+            print("✓ Database tables created")
+            
+            # Create default admin if doesn't exist
+            if not Admin.query.filter_by(username='admin').first():
+                admin = Admin(username='admin', email='admin@example.com')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("✓ Default admin created: username='admin', password='admin123'")
+            else:
+                print("✓ Admin already exists")
+            
+            # Create demo student if doesn't exist
+            if not Student.query.filter_by(matric='STU001').first():
+                student = Student(name='John Doe', matric='STU001', email='john@example.com')
+                student.set_password('student123')
+                db.session.add(student)
+                db.session.commit()
+                print("✓ Demo student created: matric='STU001', password='student123'")
+            else:
+                print("✓ Student already exists")
+                
+            print("\n✅ Database initialization complete!")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Database initialization error: {e}")
+            return False
+
+if __name__ == '__main__':
+    print("\n" + "="*50)
+    print("🚀 Secure Result Platform Backend Starting...")
+    print("="*50)
+    
+    # Initialize database
+    if initialize_database():
+        print("\n📍 API Running at: http://localhost:5000")
+        print("🏥 Health Check: http://localhost:5000/api/health")
+        print("\n👤 Demo Credentials:")
+        print("   Admin:   admin / admin123")
+        print("   Student: STU001 / student123")
+        print("="*50 + "\n")
         
-        # Create default admin if none exists
-        if not Admin.query.filter_by(username='admin').first():
-            admin = Admin(username='admin', email='admin@example.com')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✓ Default admin created: username='admin', password='admin123'")
-        
-        # Create demo student for testing
-        if not Student.query.filter_by(matric='STU001').first():
-            student = Student(name='John Doe', matric='STU001', email='john@example.com')
-            student.set_password('student123')
-            db.session.add(student)
-            db.session.commit()
-            print("✓ Demo student created: matric='STU001', password='student123'")
+        # Run the app
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    else:
+        print("❌ Failed to initialize database. Please check your DATABASE_URL")
 
 # ==================== ERROR HANDLERS ====================
 
