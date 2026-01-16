@@ -136,27 +136,7 @@ def validate_score(score):
     except (ValueError, TypeError):
         return False
 
-def init_db():
-    """Initialize database and create default users"""
-    with app.app_context():
-        db.create_all()
-        
-        # Create default admin if none exists
-        if not Admin.query.filter_by(username='admin').first():
-            admin = Admin(username='admin', email='admin@example.com')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            print("✓ Default admin created: username='admin', password='admin123'")
-        
-        # Create demo student if none exists
-        if not Student.query.filter_by(matric='STU001').first():
-            student = Student(name='John Doe', matric='STU001', email='john@example.com')
-            student.set_password('student123')
-            db.session.add(student)
-            print("✓ Demo student created: matric='STU001', password='student123'")
-        
-        db.session.commit()
-        print("\n✅ Database initialized successfully!")
+# Database initialization moved to module level (see bottom of file)
 
 # Routes
 @app.route('/')
@@ -364,49 +344,39 @@ def get_student_results(matric):
         'student': student.to_dict(),
         'results': [r.to_dict() for r in results]
     }), 200
-@app.route('/api/init-database', methods=['GET'])
-def init_database_endpoint():
-    """Temporary endpoint to initialize database"""
-    try:
-        with app.app_context():
-            db.create_all()
-            
-            # Create admin if doesn't exist
-            if not Admin.query.filter_by(username='admin').first():
-                admin = Admin(username='admin', email='admin@example.com')
-                admin.set_password('admin123')
-                db.session.add(admin)
-                db.session.commit()
-                admin_msg = "✓ Admin created"
-            else:
-                admin_msg = "✓ Admin already exists"
-            
-            # Create student if doesn't exist
-            if not Student.query.filter_by(matric='STU001').first():
-                student = Student(name='John Doe', matric='STU001', email='john@example.com')
-                student.set_password('student123')
-                db.session.add(student)
-                db.session.commit()
-                student_msg = "✓ Student created"
-            else:
-                student_msg = "✓ Student already exists"
-            
-            return jsonify({
-                'status': 'success',
-                'message': 'Database initialized',
-                'admin': admin_msg,
-                'student': student_msg
-            }), 200
-            
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+
+# Initialize database when app loads (works with gunicorn)
+try:
+    with app.app_context():
+        db.create_all()
+        
+        # Create default admin if none exists
+        if not Admin.query.filter_by(username='admin').first():
+            admin = Admin(username='admin', email='admin@example.com')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            print("✓ Default admin created: username='admin', password='admin123'")
+        else:
+            print("✓ Admin already exists")
+        
+        # Create demo student if none exists
+        if not Student.query.filter_by(matric='STU001').first():
+            student = Student(name='John Doe', matric='STU001', email='john@example.com')
+            student.set_password('student123')
+            db.session.add(student)
+            db.session.commit()
+            print("✓ Demo student created: matric='STU001', password='student123'")
+        else:
+            print("✓ Student already exists")
+        
+        print("\n✅ Database initialized successfully!")
+        
+except Exception as e:
+    print(f"❌ Database initialization error: {str(e)}")
+    # Don't crash the app, just log the error
+
 if __name__ == '__main__':
-    # Initialize database on startup
-    init_db()
-    
     print("\n" + "="*50)
     print("🚀 Secure Result Platform Backend Started!")
     print("="*50)
