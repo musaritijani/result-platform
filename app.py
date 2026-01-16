@@ -136,8 +136,6 @@ def validate_score(score):
     except (ValueError, TypeError):
         return False
 
-# Database initialization moved to module level (see bottom of file)
-
 # Routes
 @app.route('/')
 def index():
@@ -150,6 +148,47 @@ def index():
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'healthy', 'message': 'Secure Result Platform API'}), 200
+
+@app.route('/api/init-database', methods=['GET'])
+def init_database_endpoint():
+    """Endpoint to initialize database - Call this first!"""
+    try:
+        db.create_all()
+        
+        # Create admin if doesn't exist
+        admin_exists = Admin.query.filter_by(username='admin').first()
+        if not admin_exists:
+            admin = Admin(username='admin', email='admin@example.com')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            admin_msg = "✓ Admin created: username='admin', password='admin123'"
+        else:
+            admin_msg = "✓ Admin already exists"
+        
+        # Create student if doesn't exist
+        student_exists = Student.query.filter_by(matric='STU001').first()
+        if not student_exists:
+            student = Student(name='John Doe', matric='STU001', email='john@example.com')
+            student.set_password('student123')
+            db.session.add(student)
+            db.session.commit()
+            student_msg = "✓ Student created: matric='STU001', password='student123'"
+        else:
+            student_msg = "✓ Student already exists"
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Database initialized successfully',
+            'admin': admin_msg,
+            'student': student_msg
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -349,32 +388,38 @@ def get_student_results(matric):
 try:
     with app.app_context():
         db.create_all()
+        print("✓ Database tables created")
         
-        # Create default admin if none exists
-        if not Admin.query.filter_by(username='admin').first():
-            admin = Admin(username='admin', email='admin@example.com')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✓ Default admin created: username='admin', password='admin123'")
-        else:
-            print("✓ Admin already exists")
+        # Try to create default users
+        try:
+            if not Admin.query.filter_by(username='admin').first():
+                admin = Admin(username='admin', email='admin@example.com')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("✓ Default admin created: username='admin', password='admin123'")
+            else:
+                print("✓ Admin already exists")
+        except:
+            print("⚠ Admin creation skipped (call /api/init-database)")
         
-        # Create demo student if none exists
-        if not Student.query.filter_by(matric='STU001').first():
-            student = Student(name='John Doe', matric='STU001', email='john@example.com')
-            student.set_password('student123')
-            db.session.add(student)
-            db.session.commit()
-            print("✓ Demo student created: matric='STU001', password='student123'")
-        else:
-            print("✓ Student already exists")
+        try:
+            if not Student.query.filter_by(matric='STU001').first():
+                student = Student(name='John Doe', matric='STU001', email='john@example.com')
+                student.set_password('student123')
+                db.session.add(student)
+                db.session.commit()
+                print("✓ Demo student created: matric='STU001', password='student123'")
+            else:
+                print("✓ Student already exists")
+        except:
+            print("⚠ Student creation skipped (call /api/init-database)")
         
-        print("\n✅ Database initialized successfully!")
+        print("✅ Database initialization complete!")
         
 except Exception as e:
     print(f"❌ Database initialization error: {str(e)}")
-    # Don't crash the app, just log the error
+    print("⚠ Call /api/init-database to initialize manually")
 
 if __name__ == '__main__':
     print("\n" + "="*50)
@@ -382,6 +427,7 @@ if __name__ == '__main__':
     print("="*50)
     print(f"📍 API Running at: http://localhost:{os.environ.get('PORT', 5000)}")
     print(f"🏥 Health Check: http://localhost:{os.environ.get('PORT', 5000)}/api/health")
+    print(f"🔧 Init Database: http://localhost:{os.environ.get('PORT', 5000)}/api/init-database")
     print("\n👤 Demo Credentials:")
     print("   Admin:   admin / admin123")
     print("   Student: STU001 / student123")
